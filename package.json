@@ -24,8 +24,12 @@
     "jshint": "^2.9.4"
   },
   "devDependencies": {
+    "event-stream": "^3.3.4",
+    "gulp-concat": "^2.6.1",
     "gulp-inject": "^4.2.0",
+    "gulp-minify": "0.0.14",
     "gulp-sass": "^3.1.0",
-    "main-bower-files": "^2.13.1"
+    "main-bower-files": "^2.13.1",
+    "run-sequence": "^1.2.2"
   }
 }
