@@ -21,6 +21,10 @@
     "angular": "^1.6.1",
     "angular-animate": "^1.6.1",
     "angular-ui-router": "^0.4.2",
-    "jquery": "^3.1.1"
+    "jquery": "^3.1.1",
+    "highcharts": "^5.0.7",
+    "auth0-lock": "^10.11.0",
+    "angular-lock": "^1.0.5",
+    "angular-jwt": "^0.1.9"
   }
 }

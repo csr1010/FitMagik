@@ -1,19 +1,38 @@
-(function() {
-    "use strict";
+//using ES6 - by default ES6 comes with strict mode
+//importing libraries/modules from other sources
 
-    // defining main module of the application
-    angular.module("mm", ['ui.router']);
 
-    //route configuration
-    angular.module("mm").config(["$stateProvider", "$urlRouterProvider",
-        function($stateProvider, $urlRouterProvider) {
-            $urlRouterProvider.otherwise('/sleep');
-            $stateProvider
-                .state('sleep', {
-                    url: '/sleep',
-                    controller: "sleepController as vm",
-                    templateUrl: './assets/sleep/sleepView.html'
-                });
-        }
-    ]);
-})();
+//import configurations
+import mainConstants from "./config/main.constants";
+
+//import templates
+import "./config/main.templates";
+
+//import modules
+import './modules/maincontainer';
+import './modules/sleep';
+import './modules/auth';
+
+//import services
+import './services';
+
+//import components
+import './components';
+
+// modules
+var modules = [
+    'ui.router',
+    'templates',
+    'auth0.lock',
+    'angular-jwt',
+    'modules.containerModule',
+    'modules.sleepModule',
+    'modules.authModule',
+    'services.serviceModule',
+    'componentsModule'
+];
+window.app = angular.module("mm", modules);
+angular.module("mm").constant("MainConstants", mainConstants);
+angular.bootstrap(document, ["mm"], {
+    strictDi: true
+});

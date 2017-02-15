@@ -1,34 +1,73 @@
 var gulp = require("gulp"),
   mainBowerFiles = require("main-bower-files"),
-  webserver = require("gulp-webserver"),
-  es = require("event-stream"),
-  concat = require("gulp-concat"),
-  minify = require("gulp-minify"),
+  notify = require('gulp-notify'),
   sequence = require("run-sequence"),
-  jshint = require('gulp-jshint'),
   inject = require("gulp-inject");
 
-//linting the script files for code quality
-gulp.task('lint', function() {
-  gulp.src(['./app/**/*.js', '!./app/assets/**'])
-    .pipe(jshint())
-    .pipe(jshint.reporter('default'))
-    .pipe(jshint.reporter('fail'));
+//plugins for transpiling es6 to browser understandable format
+var source = require('vinyl-source-stream');
+var browserify = require('browserify');
+var babelify = require('babelify');
+var ngAnnotate = require('browserify-ngannotate');
+
+//plugin for template caching angular templates, by storing all the templates in templates.js
+var rename = require('gulp-rename');
+var templateCache = require('gulp-angular-templatecache');
+
+//server setup
+var browserSync = require('browser-sync').create();
+
+var JSFiles = "./app/**/*.js";
+var viewHtmlFiles = "./app/modules/**/*.html";
+var componentHtmlFiles = "./app/components/**/*.html";
+
+//intercept and notify errors  
+var interceptErrors = function(error) {
+  var args = Array.prototype.slice.call(arguments);
+
+  // Send error to notification center with gulp-notify
+  notify.onError({
+    title: 'Compile Error',
+    message: '<%= error.message %>'
+  }).apply(this, args);
+  // Keep gulp from hanging on this task
+  this.emit('end');
+};
+gulp.task('views', function() {
+  return gulp.src([viewHtmlFiles, componentHtmlFiles])
+    .pipe(templateCache({
+      standalone: true
+    }))
+    .on('error', interceptErrors)
+    .pipe(rename("main.templates.js"))
+    .pipe(gulp.dest('./app/config/'));
 });
+
+gulp.task('browserify', ['views'], function() {
+  return browserify('./app/app.js')
+    .transform(babelify, {
+      presets: ["es2015"]
+    })
+    .transform(ngAnnotate)
+    .bundle()
+    .on('error', interceptErrors)
+    //Pass desired output filename to vinyl-source-stream
+    .pipe(source('main.js'))
+    // Start piping stream to tasks!
+    .pipe(gulp.dest('./development/'));
+});
+
+
+
+
+
 //copying assets to development environment
-//copy assets = ca
-gulp.task("ca", function() {
-  gulp.src(['./app/assets/**', "./app/components/**/*.html"])
+gulp.task("assets", function() {
+  gulp.src(['./app/assets/**'])
+    .on('error', interceptErrors)
     .pipe(gulp.dest('./development/assets'));
 });
-// Concatenate AND minify app sources 
-//cm = concatenate and minify
-gulp.task("cm", function() {
-  gulp.src(['./app/*.js', './app/components/**/*.js'])
-    .pipe(concat('components-dev.js'))
-    .pipe(minify())
-    .pipe(gulp.dest('./development'));
-});
+
 //gulp task to inject scripts  / style path references 
 //NOTE: for mainBowerFiles() to work make sure all bower components are saved as
 //dependencies in bower.json
@@ -40,30 +79,32 @@ gulp.task("isri", function() {
     }), {
       name: "bower",
       relative: true
-    })).pipe(inject(gulp.src("./development/*dev.js", {
+    }))
+    .pipe(inject(gulp.src("./development/main.js", {
       read: false
     })), {
       relative: true
-    }).pipe(gulp.dest('./development'));
+    })
+    .pipe(gulp.dest('./development'));
 });
 
 
 
 //run gulp tasks sequentially
-gulp.task("build", function() {
-  sequence("lint", ["cm", "ca"], "isri")
-});
+gulp.task("default", function() {
+  sequence("assets", "browserify", "isri", function() {
+    browserSync.init(['./development/**/**.**'], {
+      server: "./",
+      port: process.env.PORT,
+      notify: true,
+      ui: {
+        port: process.env.PORT
+      }
+    });
 
-//server configuration
-//WS = webserver
-//since editor is network based 
-//use process.env.PORT as the port and process.env.IP as the host 
-// gulp.task('ws', function() {
-//   gulp.src('./development')
-//     .pipe(webserver({
-//       host: process.env.IP,
-//       port: process.env.PORT,
-//       directoryListing: true
-//         // fallback: 'index.html'
-//     }));
-// });
+    //gulp.watch("./app/index.html", ['isri']);
+    gulp.watch(viewHtmlFiles, ['views']);
+    gulp.watch(componentHtmlFiles, ['views']);
+    gulp.watch(JSFiles, ['browserify']);
+  });
+});
